@@ -135,6 +135,12 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Uploaded product images. Local filesystem is fine for this scope; in
+# production these belong in object storage (S3 via django-storages) so the
+# service stays stateless and can scale horizontally.
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
