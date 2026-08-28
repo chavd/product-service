@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    env_file: .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # 5434 on the host so a local Postgres or another project does not
+      # collide. Inside the network the port stays 5432.
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ecommerce} -d ${POSTGRES_DB:-ecommerce}"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    env_file: .env
+    environment:
+      # Override what .env holds for local virtualenv use: inside the
+      # network the database is reachable as db:5432.
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+    volumes:
+      # Source is mounted so code changes reload without a rebuild.
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        # Wait until Postgres actually accepts connections, not just until
+        # the container exists — otherwise migrations race the database.
+        condition: service_healthy
+
+volumes:
+  postgres_data:

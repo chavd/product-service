@@ -12,20 +12,30 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 
+import environ
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+env = environ.Env()
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+# Read .env when present. Inside the container the variables come from
+# compose, so the file does not have to exist.
+env_file = BASE_DIR / '.env'
+if env_file.exists():
+    environ.Env.read_env(env_file)
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-w2&8su#(+i&1by-_xbu&^r&7i0el7r2um@x-)iyc2cxcdo-kpr'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Configuration comes from the environment, never from this file.
+# See .env.example for the full list.
 
-ALLOWED_HOSTS = []
+SECRET_KEY = env('DJANGO_SECRET_KEY')
+
+# Defaults to False on purpose — a missing variable must not silently
+# enable debug mode in production.
+DEBUG = env.bool('DJANGO_DEBUG', default=False)
+
+ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=[])
 
 
 # Application definition
@@ -72,10 +82,17 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Host and port default to the compose service. The local .env overrides
+# them with localhost and the published port, so the same configuration
+# works inside the container and from the virtualenv.
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': env('POSTGRES_DB'),
+        'USER': env('POSTGRES_USER'),
+        'PASSWORD': env('POSTGRES_PASSWORD'),
+        'HOST': env('POSTGRES_HOST', default='db'),
+        'PORT': env('POSTGRES_PORT', default='5432'),
     }
 }
 

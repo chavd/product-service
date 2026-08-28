@@ -1,0 +1,9 @@
+# Development and test tooling, kept separate from the runtime dependencies.
+# A production image would install requirements.txt only.
+
+-r requirements.txt
+
+pytest==9.1.*
+pytest-django==4.14.*
+factory-boy==3.3.*
+ruff==0.16.*
