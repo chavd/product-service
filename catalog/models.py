@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
 
@@ -15,7 +16,14 @@ class Product(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to='products/%Y/%m/%d', blank=True, null=True)
-    price = models.DecimalField(max_digits=12, decimal_places=2)
+    # The validator turns a negative price into a 400 with a readable message.
+    # The CheckConstraint below stays as the guarantee — it also covers the
+    # paths that skip validation, such as bulk inserts and shell access.
+    price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+    )
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.EUR)
     category = models.ForeignKey('Category', on_delete=models.PROTECT, related_name='products')
     is_active = models.BooleanField(default=True)

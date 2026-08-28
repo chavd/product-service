@@ -48,8 +48,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # my apps
+    'rest_framework',
     'catalog',
 ]
+
+REST_FRAMEWORK = {
+    # A list endpoint without pagination is a denial of service against your
+    # own database once the catalogue grows.
+    'DEFAULT_PAGINATION_CLASS': 'catalog.pagination.CatalogPagination',
+    'PAGE_SIZE': 20,
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
