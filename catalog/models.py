@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 
-# Create your models here.
+
 class Currency(models.TextChoices):
     EUR = "EUR", "Euro"
     USD = "USD", "US-Dollar"
@@ -21,13 +21,6 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    def save(self, *args, **kwargs):
-        self.sku = self.sku.strip().upper()
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return self.sku
 
     class Meta:
         indexes = [
@@ -54,6 +47,14 @@ class Product(models.Model):
             ),
         ]
 
+    def __str__(self):
+        return self.sku
+
+    def save(self, *args, **kwargs):
+        self.sku = self.sku.strip().upper()
+        super().save(*args, **kwargs)
+
+
 class Category(models.Model):
     name = models.CharField(max_length=120)
     slug = models.SlugField(max_length=140, unique=True)
@@ -66,12 +67,12 @@ class Category(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.name
+
     def clean(self):
         ancestor = self.parent
         while ancestor is not None:
             if ancestor.pk == self.pk:
                 raise ValidationError({"parent": "A category cannot be its own ancestor."})
             ancestor = ancestor.parent
-
-    def __str__(self):
-        return self.name
