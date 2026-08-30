@@ -1,7 +1,10 @@
+from django.contrib.postgres.indexes import GinIndex
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import Q
+
+from .querysets import CategoryQuerySet, ProductQuerySet
 
 
 class Currency(models.TextChoices):
@@ -30,8 +33,22 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    objects = ProductQuerySet.as_manager()
+
     class Meta:
         indexes = [
+            # Trigram indexes for the fuzzy search. gin_trgm_ops requires
+            # pg_trgm, installed in migration 0003.
+            GinIndex(
+                name='idx_prod_title_trgm',
+                fields=['title'],
+                opclasses=['gin_trgm_ops'],
+            ),
+            GinIndex(
+                name='idx_prod_sku_trgm',
+                fields=['sku'],
+                opclasses=['gin_trgm_ops'],
+            ),
             models.Index(
                 fields=["category", "-created_at"],
                 condition=Q(is_active=True),
@@ -74,6 +91,8 @@ class Category(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = CategoryQuerySet.as_manager()
 
     def __str__(self):
         return self.name

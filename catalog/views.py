@@ -1,11 +1,14 @@
 from collections import defaultdict
 
 from django.db.models import ProtectedError
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from .filters import ProductFilterSet
 from .models import Category, Product
+from .ordering import CatalogOrderingFilter
 from .serializers import CategorySerializer, ProductSerializer
 
 
@@ -61,8 +64,17 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     # select_related collapses what would otherwise be one extra query per
     # row for the embedded category.
-    queryset = Product.objects.select_related('category').filter(is_active=True)
+    queryset = Product.objects.select_related('category').active()
     serializer_class = ProductSerializer
+
+    filter_backends = [DjangoFilterBackend, CatalogOrderingFilter]
+    filterset_class = ProductFilterSet
+
+    # A whitelist, not the model's field list: passing arbitrary names from
+    # the query string to the ORM leaks the schema and invites sorting on
+    # unindexed columns.
+    ordering_fields = ['price', 'created_at', 'title']
+    ordering = ['-created_at', '-id']
 
     # The SKU is the identifier clients already know, and it keeps the API
     # decoupled from the database's autoincrement. The default router pattern
