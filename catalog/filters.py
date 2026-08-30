@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import django_filters
 from django import forms
 
@@ -36,10 +38,10 @@ class ProductFilterSet(django_filters.FilterSet):
     sku = django_filters.CharFilter(method='filter_sku')
 
     price_min = django_filters.NumberFilter(
-        field_name='price', lookup_expr='gte', min_value=0,
+        field_name='price', lookup_expr='gte', min_value=Decimal('0'),
     )
     price_max = django_filters.NumberFilter(
-        field_name='price', lookup_expr='lte', min_value=0,
+        field_name='price', lookup_expr='lte', min_value=Decimal('0'),
     )
 
     category = django_filters.CharFilter(

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.postgres.indexes import GinIndex
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -25,7 +27,9 @@ class Product(models.Model):
     price = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        validators=[MinValueValidator(0)],
+        # Decimal, not int — DRF builds its own DecimalField from this and
+        # warns when the bound is a different numeric type.
+        validators=[MinValueValidator(Decimal('0'))],
     )
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.EUR)
     category = models.ForeignKey('Category', on_delete=models.PROTECT, related_name='products')

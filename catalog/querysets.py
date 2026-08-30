@@ -11,22 +11,33 @@ from django.db.models.functions import Greatest
 
 # Word similarity, not plain similarity: the latter compares the term against
 # the whole field, so a short query is structurally penalised by a long title.
-# Measured against the seed data, searching the typo "aurroa":
+# Measured on the demo data, searching the typo "aurroa":
 #
 #   similarity("Aurora Laptop Pro 14", "aurroa")       = 0.120
 #   word_similarity("aurroa", "Aurora Laptop Pro 14")  = 0.429
 #
-# Calibrated on the same data: real typo hits score 0.43-0.67, while noise
-# (an unrelated product, or a two-character term matching everything weakly)
-# stays at or below 0.33.
-RELEVANCE_THRESHOLD = 0.35
-
-# Weights: a hit in the title matters more than one in the last paragraph
-# of the description. Greatest, not a sum — a product should not rank high
-# because one weak match occurs in three places.
+# Weights decide the ranking: a hit in the title is worth more than one in
+# the last paragraph of a description. Greatest rather than a sum, so a
+# product does not climb by matching weakly in three places at once.
 TITLE_WEIGHT = 1.0
 SKU_WEIGHT = 0.8
 DESCRIPTION_WEIGHT = 0.3
+
+# Thresholds decide membership, and they are per field on purpose. Applying
+# one cut-off to the weighted score conflates "how well does this match" with
+# "how much does this field count", and that combination misbehaves at both
+# ends: a perfect description hit scores 1.0 * 0.3 and drops out, while
+# unrelated SKUs — which all look alike, because identifiers are structured —
+# score 0.5 * 0.8 and flood in.
+#
+# Measured values behind each number:
+#   title        a transposed-letter typo lands at 0.286, so the cut sits below
+#   sku          "LAP-001" scores 1.0 on itself and 0.75 on its neighbour
+#                LAP-002; near-exact is the only useful match here
+#   description  a real hit scores 1.0, incidental word overlap around 0.39
+TITLE_THRESHOLD = 0.25
+SKU_THRESHOLD = 0.8
+DESCRIPTION_THRESHOLD = 0.5
 
 
 class CategoryQuerySet(models.QuerySet):
@@ -76,13 +87,18 @@ class ProductQuerySet(models.QuerySet):
             return self
 
         return self.annotate(
+            title_similarity=TrigramWordSimilarity(term, 'title'),
+            sku_similarity=TrigramWordSimilarity(term, 'sku'),
+            description_similarity=TrigramWordSimilarity(term, 'description'),
             relevance=Greatest(
                 TrigramWordSimilarity(term, 'title') * TITLE_WEIGHT,
                 TrigramWordSimilarity(term, 'sku') * SKU_WEIGHT,
                 TrigramWordSimilarity(term, 'description') * DESCRIPTION_WEIGHT,
-            )
+            ),
         ).filter(
-            Q(relevance__gt=RELEVANCE_THRESHOLD)
+            Q(title_similarity__gt=TITLE_THRESHOLD)
+            | Q(sku_similarity__gt=SKU_THRESHOLD)
+            | Q(description_similarity__gt=DESCRIPTION_THRESHOLD)
             | Q(title__icontains=term)
             | Q(sku__iexact=term)
         )
