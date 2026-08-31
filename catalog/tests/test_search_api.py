@@ -115,6 +115,19 @@ class TestPagination:
         assert len(response.data['results']) <= 100
 
 
-def test_soft_deleted_products_are_not_listed(client, products):
-    response = client.get(URL, {'q': 'laptop'})
-    assert 'OLD-001' not in result_skus(response)
+class TestSoftDelete:
+    def test_excluded_by_default(self, client, products):
+        response = client.get(URL, {'q': 'laptop'})
+        assert 'OLD-001' not in result_skus(response)
+
+    def test_reachable_with_an_explicit_flag(self, client, products):
+        response = client.get(URL, {'q': 'laptop', 'is_active': 'false'})
+        assert result_skus(response) == ['OLD-001']
+
+    def test_explicit_true_matches_the_default(self, client, products):
+        explicit = client.get(URL, {'q': 'laptop', 'is_active': 'true'})
+        implicit = client.get(URL, {'q': 'laptop'})
+        assert result_skus(explicit) == result_skus(implicit)
+
+    def test_detail_of_a_soft_deleted_product_is_404(self, client, products):
+        assert client.get(f'{URL}OLD-001/').status_code == 404

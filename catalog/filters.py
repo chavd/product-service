@@ -53,6 +53,11 @@ class ProductFilterSet(django_filters.FilterSet):
         label='Include subcategories (default true)',
     )
 
+    is_active = django_filters.BooleanFilter(
+        field_name='is_active',
+        label='Include soft-deleted products (default: only active ones)',
+    )
+
     currency = django_filters.ChoiceFilter(choices=Currency.choices)
     created_after = django_filters.IsoDateTimeFilter(
         field_name='created_at', lookup_expr='gte',
@@ -74,6 +79,17 @@ class ProductFilterSet(django_filters.FilterSet):
             bound = type(form_class.__name__, (ProductFilterForm, form_class), {})
             self._form = bound(data=self.data, prefix=self.form_prefix)
         return self._form
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+
+        # django-filter skips a filter whose parameter is absent, but the
+        # default here is not "no filter" — soft-deleted products stay out
+        # unless the caller asks for them by name.
+        if self.form.cleaned_data.get('is_active') is None:
+            queryset = queryset.active()
+
+        return queryset
 
     def filter_noop(self, queryset, name, value):
         """include_descendants is read inside filter_category."""

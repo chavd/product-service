@@ -64,7 +64,9 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class ProductViewSet(viewsets.ModelViewSet):
     # select_related collapses what would otherwise be one extra query per
     # row for the embedded category.
-    queryset = Product.objects.select_related('category').active()
+    # Not filtered to active here: the soft-delete default lives in the
+    # FilterSet, so that ?is_active=false can reach the excluded rows.
+    queryset = Product.objects.select_related('category')
     serializer_class = ProductSerializer
 
     filter_backends = [DjangoFilterBackend, CatalogOrderingFilter]
