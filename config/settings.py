@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     # my apps
     'rest_framework',
     'django_filters',
+    'drf_spectacular',
     'catalog',
 ]
 
@@ -58,6 +59,23 @@ REST_FRAMEWORK = {
     # own database once the catalogue grows.
     'DEFAULT_PAGINATION_CLASS': 'catalog.pagination.CatalogPagination',
     'PAGE_SIZE': 20,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Product Service API',
+    'VERSION': '1.0.0',
+    'DESCRIPTION': (
+        'Catalogue of products and nested categories.\n\n'
+        'Search and filtering live on `GET /products/` as query parameters '
+        'rather than on a separate endpoint: searching is safe and '
+        'idempotent, the results stay cacheable, and a search without '
+        'filters is simply the full list.\n\n'
+        'Deleting a product is a soft delete. Soft-deleted products are '
+        'excluded by default and reachable with `is_active=false`.'
+    ),
+    # The schema endpoint should not document itself.
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 MIDDLEWARE = [
